@@ -41,6 +41,28 @@ static inline const char *__ev_path(const char *name)
 	return file;
 }
 
+static const char *event_val_parse(const char *val, const char *old)
+{
+	static char seq[16];
+	int old_seq;
+
+	if (strcmp(val, "+"))
+		return val;
+
+	if (!old)
+		return "seq 0";
+
+	if (strncmp(old, "seq ", 4))
+		return val;
+
+	old_seq = strtol(&old[4], NULL, 0);
+	if (old_seq < 0)
+		return val;
+
+	snprintf(seq, sizeof(seq), "seq %d", old_seq + 1);
+	return seq;
+}
+
 static int event_exist(const char *name)
 {
 	return fexist((char *)__ev_path(name));
@@ -84,6 +106,7 @@ static int event_set(const char *name, const char *val)
 		if (!fp)
 			goto err;
 
+		val = event_val_parse(val, old);
 		if (fputs(val, fp) < 0)
 			goto err_close;
 
