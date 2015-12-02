@@ -24,10 +24,8 @@
 #ifndef FINIT_EVENT_H_
 #define FINIT_EVENT_H_
 
-int  event_cache_gw     (void);
-int  event_cache_if     (char *ifname);
-int  event_service_cond (char *events);
-void event_dispatch     (char *msg);
+int  event_all_met  (const char *evstrs);
+void event_dispatch (char *msg);
 
 #endif	/* FINIT_EVENT_H_ */
 

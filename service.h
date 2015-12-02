@@ -39,6 +39,7 @@ void      service_stop_dynamic   (void);
 int       service_restart        (svc_t *svc);
 int	  service_reload	 (svc_t *svc);
 void      service_reload_dynamic (void);
+void      service_dance          (svc_t *svc, int event);
 
 #endif	/* FINIT_SERVICE_H_ */
 

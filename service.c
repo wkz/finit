@@ -45,7 +45,6 @@ static int    dyn_stop_cnt = 0;
 
 static int    is_norespawn       (void);
 static void   restart_lost_procs (void);
-static void   svc_dance          (svc_t *svc);
 #ifndef INETD_DISABLED
 static svc_t *find_inetd_svc     (char *path, char *service, char *proto);
 #endif
@@ -104,7 +103,7 @@ svc_cmd_t service_enabled(svc_t *svc, int event, void *arg)
 	 * Event conditions for services are ignored during bootstrap.
 	 */
 	_d("Checking %s runlevel %d and events %s", svc->cmd, runlevel, svc->events);
-	if (runlevel && !event_service_cond(svc->events))
+	if (runlevel && !event_all_met(svc->events))
 		return SVC_STOP;
 
 	if (svc->state == SVC_RELOAD_STATE)
@@ -380,7 +379,7 @@ void service_start_dynamic(void)
 	_d("Starting enabled/added services ...");
 	for (svc = svc_dynamic_iterator(1); svc; svc = svc_dynamic_iterator(0)) {
 		if (svc_is_updated(svc))
-			svc_dance(svc);
+			service_dance(svc, 0);
 	}
 
 	/* Cleanup stale services */
@@ -578,7 +577,7 @@ void service_runlevel(int newlevel)
 #endif
 
 		/* All other services consult their callback here */
-		svc_dance(svc);
+		service_dance(svc, 0);
 	}
 
 	/* Cleanup stale services */
@@ -935,13 +934,16 @@ static void restart_lost_procs(void)
 }
 
 /* Singing and dancing ... */
-static void svc_dance(svc_t *svc)
+void service_dance(svc_t *svc, int event)
 {
-	svc_cmd_t cmd = service_enabled(svc, 0, NULL);
+	svc_cmd_t cmd = service_enabled(svc, event, NULL);
+	svc_state_t state;
+
+	state = event ? SVC_CONDHALT_STATE : SVC_HALTED_STATE;
 
 	if (svc->pid) {
 		if (SVC_STOP == cmd)
-			service_stop(svc, SVC_HALTED_STATE);
+			service_stop(svc, state);
 		else if (SVC_RELOAD == cmd)
 			service_reload(svc);
 	} else {
