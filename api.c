@@ -32,6 +32,7 @@
 
 #include "config.h"
 #include "finit.h"
+#include "event.h"
 #include "conf.h"
 #include "helpers.h"
 #include "plugin.h"
@@ -46,7 +47,7 @@ uev_t api_watcher;
 /* Allowed characters in job/id/name */
 static int isallowed(int ch)
 {
-	return isalnum(ch) || isspace(ch) || ch == ':';
+	return isprint(ch);
 }
 
 /* Sanitize user input, make sure to NUL terminate. */
@@ -175,9 +176,8 @@ static int do_handle_event(char *event)
 		}
 	}
 
-	/* XXX: iterate over all services' events before failing. */
-
-	return -1;
+	event_dispatch(event);
+	return 0;
 }
 
 static int do_handle_emit(char *buf, size_t len)
