@@ -34,10 +34,10 @@ ARCHTOOL    = `which git-archive-all`
 ARCHIVE     = $(PKG).tar
 ARCHIVEZ    = ../$(ARCHIVE).xz
 EXEC        = finit initctl reboot
-HEADERS     = finit.h plugin.h svc.h inetd.h helpers.h queue.h
+HEADERS     = finit.h plugin.h svc.h inetd.h helpers.h queue.h cond.h
 DISTFILES   = LICENSE README ChangeLog finit.conf services
 OBJS        = finit.o api.o client.o conf.o exec.o helpers.o pid.o sig.o \
-	      svc.o service.o plugin.o tty.o inetd.o event.o
+	      svc.o service.o plugin.o tty.o inetd.o cond.o cond-w.o
 DEPLIBS     =
 TOPDIR      = $(shell pwd)
 -include config.mk
@@ -46,7 +46,7 @@ TOPDIR      = $(shell pwd)
 SRCS        = $(OBJS:.o=.c)
 DEPS        = $(SRCS:.c=.d)
 
-CFLAGS     += -W -Wall
+CFLAGS     += -W -Wall -O0
 # Disable annoying gcc warning for "warn_unused_result", see GIT 37af997
 CPPFLAGS   += -U_FORTIFY_SOURCE
 CPPFLAGS   += -I$(TOPDIR)
@@ -70,7 +70,7 @@ config.h: configure
 
 finit: $(OBJS) $(DEPLIBS)
 
-initctl: initctl.o svc.o helpers.o $(DEPLIBS)
+initctl: initctl.o svc.o helpers.o cond.o $(DEPLIBS)
 
 reboot: reboot.o $(DEPLIBS)
 
@@ -79,7 +79,7 @@ install-exec: all
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
 	@for file in $(EXEC); do                                	\
 		printf "  INSTALL $(DESTDIR)$(sbindir)/$$file\n";   	\
-		$(STRIPINST) $$file $(DESTDIR)$(sbindir)/$$file; 	\
+		cp $$file $(DESTDIR)$(sbindir)/$$file; 	\
 	done
 	@printf "  INSTALL $(DESTDIR)$(sbindir)/service\n"
 	@$(INSTALL) -m 0755 service $(DESTDIR)$(sbindir)/service

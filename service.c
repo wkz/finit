@@ -31,7 +31,7 @@
 
 #include "finit.h"
 #include "conf.h"
-#include "event.h"
+#include "cond.h"
 #include "helpers.h"
 #include "private.h"
 #include "sig.h"
@@ -90,6 +90,7 @@ void service_bootstrap(void)
 svc_cmd_t service_enabled(svc_t *svc, int event, void *arg)
 {
 	svc_cmd_t cmd = SVC_START; /* Default to start, since listed in finit.conf */
+	enum cond_state cond;
 
 	if (!svc) {
 		errno = EINVAL;
@@ -99,11 +100,9 @@ svc_cmd_t service_enabled(svc_t *svc, int event, void *arg)
 	if (!svc_in_runlevel(svc, runlevel))
 		return SVC_STOP;
 
-	/*
-	 * Event conditions for services are ignored during bootstrap.
-	 */
-	_d("Checking %s runlevel %d and events %s", svc->cmd, runlevel, svc->events);
-	if (runlevel && !event_all_met(svc->events))
+	cond = cond_get_agg(svc->cond);
+	_d("%s: cond:%s state:%s", svc->cmd, svc->cond, condstr(cond));
+	if (cond < COND_ON)
 		return SVC_STOP;
 
 	if (svc->state == SVC_RELOAD_STATE)
@@ -294,12 +293,14 @@ int service_start(svc_t *svc)
 		}
 
 		sig_unblock();
+	_d("0 WWWKZ");
 
 		if (svc->inetd.cmd)
 			status = svc->inetd.cmd(svc->inetd.type);
 		else
 			status = execv(svc->cmd, args); /* XXX: Maybe use execve() to be able to launch scripts? */
 
+	_d("1 WWWKZ");
 		if (svc_is_inetd(svc)) {
 			if (svc->inetd.type == SOCK_STREAM) {
 				close(STDIN_FILENO);
@@ -313,6 +314,7 @@ int service_start(svc_t *svc)
 	svc->pid = pid;
 	svc->state = SVC_RUNNING_STATE;
 
+	_d("2 WWWKZ");
 	if (svc_is_inetd(svc)) {
 		if (svc->inetd.type == SOCK_STREAM)
 			close(sd);
@@ -330,6 +332,7 @@ int service_start(svc_t *svc)
 			print_result(result);
 	}
 
+	_d("3 WWWKZ");
 	return 0;
 }
 
@@ -419,20 +422,35 @@ static int service_stop_done(svc_t *svc)
  */
 void service_stop_dynamic(void)
 {
+	static char cond[MAX_ARG_LEN];
+
 	svc_t *svc;
+	svc_state_t new_state;
 
 	_d("Stopping disabled/removed services ...");
 	for (svc = svc_dynamic_iterator(1); svc; svc = svc_dynamic_iterator(0)) {
-		if (svc_is_changed(svc) && svc->pid) {
-			svc_state_t new_state = SVC_RELOAD_STATE;
+		if (!svc_is_changed(svc)) {
+			/* If a service was not affected by an event,
+			 * clear the flux condition as the service
+			 * will not touch its pidfile on its own */
+			snprintf(cond, sizeof(cond), "svc/%s", svc->cmd);
+			if (svc->pid && cond_get(cond) == COND_FLUX)
+				cond_set(cond);
 
-			if (svc_is_removed(svc))
-				new_state = SVC_HALTED_STATE;
-
-			dyn_stop_cnt++;
-			_d("Marking service %s as state %d", svc->cmd, new_state);
-			service_stop(svc, new_state);
+			continue;
 		}
+
+		if (!svc->pid)
+			continue;
+
+		new_state = SVC_RELOAD_STATE;
+
+		if (svc_is_removed(svc))
+			new_state = SVC_HALTED_STATE;
+
+		dyn_stop_cnt++;
+		_d("Marking service %s as state %d", svc->cmd, new_state);
+		service_stop(svc, new_state);
 	}
 
 	/* Check if we need to collect any services before calling user HOOK */
@@ -504,6 +522,9 @@ int service_reload(svc_t *svc)
  */
 void service_reload_dynamic(void)
 {
+	/* Mark all service conditions as in-flux */
+	cond_reload();
+
 	/* First reload all *.conf in /etc/finit.d/ */
 	conf_reload_dynamic();
 
@@ -663,7 +684,7 @@ int service_register(int type, char *line, time_t mtime, char *username)
 	int forking = 0;
 #endif
 	char *service = NULL, *proto = NULL, *ifaces = NULL;
-	char *cmd, *desc, *runlevels = NULL, *events = NULL;
+	char *cmd, *desc, *runlevels = NULL, *cond = NULL;
 	svc_t *svc;
 	plugin_t *plugin = NULL;
 
@@ -688,8 +709,8 @@ int service_register(int type, char *line, time_t mtime, char *username)
 			username = &cmd[1];
 		else if (cmd[0] == '[')	/* [runlevels] */
 			runlevels = &cmd[0];
-		else if (cmd[0] == '<')	/* [!ev] */
-			events = &cmd[1];
+		else if (cmd[0] == '<')	/* <[!][ev][,ev..]> */
+			cond = &cmd[1];
 		else if (cmd[0] == ':')	/* :ID */
 			id = atoi(&cmd[1]);
 #ifndef INETD_DISABLED
@@ -797,7 +818,7 @@ int service_register(int type, char *line, time_t mtime, char *username)
 	_d("Service %s runlevel 0x%2x", svc->cmd, svc->runlevels);
 
 	if (type == SVC_TYPE_SERVICE)
-		conf_parse_events(svc, events);
+		conf_parse_cond(svc, cond);
 
 #ifndef INETD_DISABLED
 	if (svc_is_inetd(svc)) {
@@ -840,8 +861,9 @@ void service_unregister(svc_t *svc)
 
 void service_monitor(pid_t lost)
 {
-	svc_t *svc;
 	static int was_stopped = 0;
+
+	svc_t *svc;
 
 	if (was_stopped && !is_norespawn()) {
 		was_stopped = 0;

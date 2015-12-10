@@ -24,6 +24,7 @@
 #ifndef FINIT_EVENT_H_
 #define FINIT_EVENT_H_
 
+int  event_set      (const char *name, const char *val);
 int  event_all_met  (const char *evstrs);
 void event_dispatch (char *msg);
 

@@ -28,6 +28,7 @@
 #include <sys/un.h>
 
 #include "finit.h"
+#include "cond.h"
 #include "helpers.h"
 #include "service.h"
 
@@ -127,6 +128,41 @@ static int do_stop   (char *arg) { return do_svc(INIT_CMD_STOP_SVC,    arg); }
 static int do_reload (char *arg) { return do_svc(INIT_CMD_RELOAD_SVC,  arg); }
 static int do_restart(char *arg) { return do_svc(INIT_CMD_RESTART_SVC, arg); }
 
+static void show_cond_one(const char *_conds)
+{
+	static char conds[MAX_ARG_LEN];
+	char *cond;
+
+	strlcpy(conds, _conds, sizeof(conds));
+
+	for (cond = strtok(conds, ","); cond; cond = strtok(NULL, ",")) {
+		printf("  %-20.20s  %s\n", cond, condstr(cond_get(cond)));
+	}
+	
+}
+
+static void show_cond(void)
+{
+	svc_t *svc;
+
+	for (svc = svc_iterator(1); svc; svc = svc_iterator(0)) {
+		if (!svc->cond[0])
+			continue;
+
+		printf("%-22.22s  %s\n", svc->cmd,
+		       condstr(cond_get_agg(svc->cond)));
+		puts("======================  ====");
+		show_cond_one(svc->cond);
+		putchar('\n');
+	}
+}
+
+static int do_cond(char *arg)
+{
+	show_cond();
+	return 0;
+}
+
 static int show_version(char *UNUSED(arg))
 {
 	puts("v" VERSION);
@@ -225,6 +261,7 @@ static int usage(int rc)
 		"  reload                    Reload *.conf in /etc/finit.d/ and activate changes\n"
 		"  runlevel [0-9]            Show or set runlevel: 0 halt, 6 reboot\n"
 		"  status | show             Show status of services\n"
+		"  cond     show             Show condition status\n"
 		"  start    <JOB|NAME>[:ID]  Start service by job# or name, with optional ID\n"
 		"  stop     <JOB|NAME>[:ID]  Stop/Pause a running service by job# or name\n"
 		"  restart  <JOB|NAME>[:ID]  Restart (stop/start) service by job# or name\n"
@@ -244,6 +281,7 @@ int main(int argc, char *argv[])
 		{ "runlevel", do_runlevel  },
 		{ "status",   show_status  },
 		{ "show",     show_status  }, /* Convenience alias */
+		{ "cond",     do_cond      },
 		{ "start",    do_start     },
 		{ "stop",     do_stop      },
 		{ "restart",  do_restart   },

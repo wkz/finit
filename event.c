@@ -84,7 +84,7 @@ static const char *event_get(const char *name)
 	return ret ? : "";
 }
 
-static int event_set(const char *name, const char *val)
+int event_set(const char *name, const char *val)
 {
 	const char *old;
 	FILE *fp;

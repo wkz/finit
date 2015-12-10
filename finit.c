@@ -78,8 +78,8 @@ int main(int argc, char* argv[])
 	 * finit/init/telinit client tool uses /dev/initctl pipe
 	 * for compatibility but initctl client tool uses socket
 	 */
-	if (getpid() != 1)
-		return client(argc, argv);
+	/* if (getpid() != 1) */
+	/* 	return client(argc, argv); */
 
 	/*
 	 * Initial setup of signals, ignore all until we're up.
@@ -172,6 +172,7 @@ int main(int argc, char* argv[])
 	/* Base FS up, enable standard SysV init signals */
 	sig_setup(&loop);
 
+
 	_d("Base FS up, calling hooks ...");
 	plugin_run_hooks(HOOK_BASEFS_UP);
 
@@ -224,6 +225,7 @@ int main(int argc, char* argv[])
 	/* Start new initctl API responder */
 	api_init(&loop);
 
+	/* system("(gdbserver --attach /dev/ttyS1 1 &); sleep 1"); */
 	/*
 	 * Enter main loop to monior /dev/initctl and services
 	 */

@@ -32,7 +32,7 @@
 
 #include "config.h"
 #include "finit.h"
-#include "event.h"
+#include "cond.h"
 #include "conf.h"
 #include "helpers.h"
 #include "plugin.h"
@@ -176,7 +176,10 @@ static int do_handle_event(char *event)
 		}
 	}
 
-	event_dispatch(event);
+	if (event[0] == '~')
+		cond_clear(&event[1]);
+	else
+		cond_set(event);
 	return 0;
 }
 
