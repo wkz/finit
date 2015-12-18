@@ -108,24 +108,15 @@ static int do_svc(int cmd, char *arg)
 		.cmd = cmd,
 	};
 
-	if (!arg || !arg[0]) {
-		if (cmd == INIT_CMD_RELOAD_SVC) {
-			rq.cmd = INIT_CMD_RELOAD;
-			goto exit;
-		}
-
-		return 1;
-	}
 	strlcpy(rq.data, arg, sizeof(rq.data));
 
-exit:
 	return do_send(&rq, sizeof(rq));
 }
 
 static int do_emit   (char *arg) { return do_svc(INIT_CMD_EMIT,        arg); }
+static int do_reload (char *arg) { return do_svc(INIT_CMD_RELOAD,      arg); }
 static int do_start  (char *arg) { return do_svc(INIT_CMD_START_SVC,   arg); }
 static int do_stop   (char *arg) { return do_svc(INIT_CMD_STOP_SVC,    arg); }
-static int do_reload (char *arg) { return do_svc(INIT_CMD_RELOAD_SVC,  arg); }
 static int do_restart(char *arg) { return do_svc(INIT_CMD_RESTART_SVC, arg); }
 
 static void show_cond_one(const char *_conds)
@@ -265,7 +256,6 @@ static int usage(int rc)
 		"  start    <JOB|NAME>[:ID]  Start service by job# or name, with optional ID\n"
 		"  stop     <JOB|NAME>[:ID]  Stop/Pause a running service by job# or name\n"
 		"  restart  <JOB|NAME>[:ID]  Restart (stop/start) service by job# or name\n"
-		"  reload   <JOB|NAME>[:ID]  Reload (SIGHUP) service by job# or name\n"
 		"  version                   Show Finit version\n\n", __progname);
 
 	return rc;

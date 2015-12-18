@@ -63,8 +63,7 @@ enum cond_state cond_get_path(const char *path)
 	if (stat(path, &st))
 		return COND_OFF;
 
-	if (strstr(path, COND_SVC_PATH) != path ||
-	    stat(COND_RECONF, &st_reconf) ||
+	if (stat(COND_RECONF, &st_reconf) ||
 	    timespec_newer(&st.st_mtim, &st_reconf.st_mtim))
 		return COND_ON;
 

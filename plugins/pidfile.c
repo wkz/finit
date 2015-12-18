@@ -40,6 +40,8 @@ static void pidfile_callback(void *UNUSED(arg), int fd, int UNUSED(events))
 		if (!svc)
 			continue;
 
+		/* TODO FIXME XXX WKZ check that pid is controlled by finit */
+		
 		_d("%s: match %s", basename, svc->cmd);
 		snprintf(cond, sizeof(cond), "svc%s", svc->cmd);
 		if (ev->mask & (IN_CREATE | IN_ATTRIB))

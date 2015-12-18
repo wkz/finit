@@ -408,7 +408,16 @@ char *svc_status(svc_t *svc)
 {
 	switch (svc->state) {
 	case SVC_HALTED_STATE:
-		return "halted";
+		switch (svc->block) {
+		case SVC_BLOCK_NONE:
+			return "halted";
+		case SVC_BLOCK_MISSING:
+			return "missing";
+		case SVC_BLOCK_CRASHING:
+			return "crashing";
+		case SVC_BLOCK_USER:
+			return "blocked";
+		}
 	case SVC_DONE_STATE:
 		return "done";
 	case SVC_STOPPING_STATE:

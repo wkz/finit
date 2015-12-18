@@ -7,8 +7,8 @@
 #include "cond.h"
 #include "service.h"
 
-#undef _d
-#define _d _e
+/* #undef _d */
+/* #define _d _e */
 
 static int cond_set_path(const char *path, enum cond_state new)
 {
