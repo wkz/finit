@@ -1,10 +1,14 @@
 #include <libgen.h>
 #include <libite/lite.h>
 #include <stdio.h>
+#include <utime.h>
 
 #include "finit.h"
 #include "cond.h"
 #include "service.h"
+
+#undef _d
+#define _d _e
 
 static int cond_set_path(const char *path, enum cond_state new)
 {
@@ -19,6 +23,7 @@ static int cond_set_path(const char *path, enum cond_state new)
 		strlcpy(dir, path, sizeof(dir));
 		makepath(dirname(dir));
 		touch(path);
+		utime(path, NULL);
 		break;
 	case COND_OFF:
 		unlink(path);
@@ -39,12 +44,13 @@ static void cond_update(const char *name)
 
 	for (svc = svc_iterator(1); svc; svc = svc_iterator(0)) {
 		if (svc->type != SVC_TYPE_SERVICE  ||
-		    !cond_affects(name, svc->cond)) {
+		    !svc->cond[0] ||
+		    (name && !cond_affects(name, svc->cond))) {
 			continue;
 		}
 
 		_d("%s: match <%s> %s", name, svc->cond, svc->cmd);
-		service_dance(svc, 1);
+		service_step(svc);
 	}
 }
 
@@ -68,8 +74,20 @@ void cond_clear(const char *name)
 
 void cond_reload(void)
 {
+	static char name[MAX_ARG_LEN];
+
+	svc_t *svc;
+
 	_d("");
 	cond_set_path(COND_RECONF, COND_ON);
+
+	for (svc = svc_iterator(1); svc; svc = svc_iterator(0)) {
+		_d("%-20.20s state:%-7.7s dirty:%d", svc->cmd, svc_status(svc), svc->dirty);
+		if (svc->state == SVC_RUNNING_STATE && !svc_is_changed(svc)) {
+			snprintf(name, MAX_ARG_LEN, "svc%s", svc->cmd);
+			cond_set_path(cond_path(name), COND_ON);
+		}
+	}
 	cond_update(NULL);
 }
 

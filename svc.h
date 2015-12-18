@@ -39,22 +39,37 @@ typedef enum {
 } svc_cmd_t;
 
 typedef enum {
-	SVC_TYPE_FREE = 0,	/* Free to allocate */
-	SVC_TYPE_SERVICE,	/* Monitored, will be respawned */
-	SVC_TYPE_TASK,		/* One-shot, runs in parallell */
-	SVC_TYPE_RUN,		/* Like task, but wait for completion */
-	SVC_TYPE_INETD		/* Classic inetd service */
+	SVC_TYPE_FREE    = 0,	/* Free to allocate */
+	SVC_TYPE_SERVICE = 1,	/* Monitored, will be respawned */
+	SVC_TYPE_TASK    = 2,	/* One-shot, runs in parallell */
+	SVC_TYPE_RUN     = 4,	/* Like task, but wait for completion */
+	SVC_TYPE_INETD   = 8	/* Classic inetd service */
 } svc_type_t;
 
+#define SVC_TYPE_ANY          (-1)
+
 typedef enum {
+	/* SVC_WAITING_STATE,	/\* Waiting for connection (inetd service)   *\/ */
+	/* SVC_PAUSED_STATE,	/\* Stopped/Paused by user started on reload *\/ */
+	/* SVC_CONDHALT_STATE,	/\* Not allowed to run atm. event/state lost *\/ */
+	/* SVC_CONDWAIT_STATE,	/\* Sigstopped atm. waiting for condition    *\/ */
+	/* SVC_RESTART_STATE,	/\* Restarting service waiting to be stopped *\/ */
+	/* SVC_RELOAD_STATE,	/\* Reloading services, after .conf changed  *\/ */
+	/* SVC_RUNNING_STATE,	/\* Currently running service, see svc->pid  *\/ */
 	SVC_HALTED_STATE = 0,	/* Not allowed in runlevel, or not enabled. */
-	SVC_WAITING_STATE,	/* Waiting for connection (inetd service)   */
-	SVC_PAUSED_STATE,	/* Stopped/Paused by user started on reload */
-	SVC_CONDHALT_STATE,	/* Not allowed to run atm. event/state lost */
-	SVC_RESTART_STATE,	/* Restarting service waiting to be stopped */
-	SVC_RELOAD_STATE,	/* Reloading services, after .conf changed  */
-	SVC_RUNNING_STATE,	/* Currently running service, see svc->pid  */
+	SVC_DONE_STATE,
+	SVC_STOPPING_STATE,
+	SVC_WAITING_STATE,
+	SVC_READY_STATE,
+	SVC_RUNNING_STATE,
 } svc_state_t;
+
+typedef enum {
+	SVC_BLOCK_NONE = 0,
+	SVC_BLOCK_MISSING,
+	SVC_BLOCK_CRASHING,
+	SVC_BLOCK_USER,
+} svc_block_t;
 
 #define FINIT_SHM_ID     0x494E4954  /* "INIT", see ascii(7) */
 #define MAX_ARG_LEN      64
@@ -73,17 +88,18 @@ typedef struct svc {
 
 	/* Service details */
 	pid_t	       pid;
-	svc_state_t    state;	       /* Paused, Reloading, Restart, Running, ... */
+	const svc_state_t    state;	       /* Paused, Reloading, Restart, Running, ... */
 	svc_type_t     type;
 	time_t	       mtime;	       /* Modification time for .conf from /etc/finit.d/ */
 	int            dirty;	       /* Set if old mtime != new mtime  => reloaded,
 					* or -1 when marked for removal */
 	int	       runlevels;
 	int            sighup;	       /* This service supports SIGHUP :) */
+	svc_block_t    block;	       /* Reason that this service is currently blocked */
 	char           cond[MAX_ARG_LEN];
 
 	/* Incremented for each restart by service monitor. */
-	unsigned int   restart_counter;
+	const unsigned int   restart_counter;
 
 	/* For inetd services */
 	inetd_t        inetd;

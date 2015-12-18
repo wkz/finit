@@ -114,13 +114,22 @@ static int call(int (*action)(svc_t *), char *buf, size_t len)
 	return result;
 }
 
-static int service_pause(svc_t *svc)
+static int service_block(svc_t *svc)
 {
-	return service_stop(svc, SVC_PAUSED_STATE);
+	svc->block = SVC_BLOCK_USER;
+	service_step(svc);
+	return 0;
+}
+
+static int service_reload(svc_t *svc)
+{
+	svc->dirty = 1;
+	service_step(svc);
+	return 0;
 }
 
 static int do_start  (char *buf, size_t len) { return call(service_start,   buf, len); }
-static int do_pause  (char *buf, size_t len) { return call(service_pause,   buf, len); }
+static int do_pause  (char *buf, size_t len) { return call(service_block,   buf, len); }
 static int do_reload (char *buf, size_t len) { return call(service_reload,  buf, len); }
 static int do_restart(char *buf, size_t len) { return call(service_restart, buf, len); }
 
@@ -156,9 +165,9 @@ typedef struct {
 } ev_t;
 
 ev_t ev_list[] = {
-	{ "RELOAD", conf_reload_dynamic   },
-	{ "STOP",   service_stop_dynamic  },
-	{ "START",  service_start_dynamic },
+	{ "RELOAD", service_reload_dynamic   },
+	/* { "STOP",   service_stop_dynamic  }, */
+	/* { "START",  service_start_dynamic }, */
 	{ NULL, NULL }
 };
 

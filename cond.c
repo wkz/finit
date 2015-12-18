@@ -37,6 +37,17 @@ static inline int timespec_newer(const struct timespec *a,
 	return a->tv_nsec > b->tv_nsec;
 }
 
+const char *condstr(enum cond_state s)
+{
+	static const char *strs[] = {
+		[COND_OFF]  = "off",
+		[COND_FLUX] = "flux",
+		[COND_ON]   = "on",
+	};
+
+	return strs[s];
+}
+
 const char *cond_path(const char *name)
 {
 	static char file[MAX_ARG_LEN];

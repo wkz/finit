@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "finit.h"
+#include "cond.h"
 #include "service.h"
 #include "tty.h"
 #include "libite/lite.h"
@@ -145,7 +146,6 @@ void conf_parse_cond(svc_t *svc, char *cond)
 		return;
 	}
 
-	svc->state = SVC_CONDHALT_STATE;
 	strlcpy(svc->cond, ptr, sizeof(svc->cond));
 }
 

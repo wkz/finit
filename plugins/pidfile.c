@@ -19,18 +19,19 @@ static void pidfile_callback(void *UNUSED(arg), int fd, int UNUSED(events))
 	static char cond[MAX_ARG_LEN];
 
 	struct inotify_event *ev;
-	ssize_t len;
+	ssize_t sz, len;
 	char *basename;
 	svc_t *svc;
 
-	len = read(fd, ev_buf, sizeof(ev_buf));
-	if (len <= 0) {
+	sz = read(fd, ev_buf, sizeof(ev_buf));
+	if (sz <= 0) {
 		_pe("invalid inotify event\n");
 		return;
 	}
 
-	for (ev = (void *)ev_buf; len > sizeof(*ev);
-	     ev = (void *)(ev + 1) + ev->len, len -= sizeof(*ev) + ev->len) {
+	for (ev = (void *)ev_buf; sz > sizeof(*ev);
+	     len = sizeof(*ev) + ev->len, ev = (void *)ev + len, sz -= len) {
+	     /* ev = (void *)(ev + 1) + ev->len, sz -= sizeof(*ev) + ev->len) { */
 		if (!ev->mask || !strstr(ev->name, ".pid"))
 			continue;
 

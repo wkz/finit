@@ -7,23 +7,13 @@
 #define COND_SVC_PATH COND_PATH "/svc/"
 #define COND_RECONF   COND_PATH "/reconf"
 
-enum cond_state {
-	COND_OFF,
+typedef enum cond_state {
+	COND_OFF = 0,
 	COND_FLUX,
 	COND_ON
-};
+} cond_state_t;
 
-static inline const char *condstr(enum cond_state s)
-{
-	const char *strs[] = {
-		[COND_OFF]  = "off",
-		[COND_FLUX] = "flux",
-		[COND_ON]   = "on",
-	};
-
-	return strs[s];
-}
-
+const char     *condstr      (enum cond_state s);
 const char     *cond_path    (const char *name);
 enum cond_state cond_get_path(const char *path);
 enum cond_state cond_get     (const char *name);
