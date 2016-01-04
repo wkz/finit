@@ -72,6 +72,7 @@ int service_enabled(svc_t *svc)
 {
 	if (!svc ||
 	    !svc_in_runlevel(svc, runlevel) ||
+	    svc_is_removed(svc) ||
 	    svc->block != SVC_BLOCK_NONE)
 		return 0;
 
@@ -364,11 +365,17 @@ static void service_reload_dynamic_finish(void)
 {
 	in_dyn_teardown = 0;
 
-	_d("All services have been stoppped, calling reconf hooks ...");
-	plugin_run_hooks(HOOK_SVC_RECONF);
+	/* Cleanup stale services */
+	svc_clean_dynamic(service_unregister);
 
 	_d("Starting services after reconf ...");
 	service_step_all(SVC_TYPE_SERVICE);
+
+	_d("Calling reconf hooks ...");
+	plugin_run_hooks(HOOK_SVC_RECONF);
+
+	service_step_all(SVC_TYPE_SERVICE);
+	_d("Reconfiguration done");
 }
 
 /**

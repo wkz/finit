@@ -7,10 +7,7 @@
 #include "cond.h"
 #include "service.h"
 
-/* #undef _d */
-/* #define _d _e */
-
-static int cond_set_path(const char *path, enum cond_state new)
+int cond_set_path(const char *path, enum cond_state new)
 {
 	static char dir[MAX_ARG_LEN];
 
@@ -74,20 +71,9 @@ void cond_clear(const char *name)
 
 void cond_reload(void)
 {
-	static char name[MAX_ARG_LEN];
-
-	svc_t *svc;
-
 	_d("");
 	cond_set_path(COND_RECONF, COND_ON);
 
-	for (svc = svc_iterator(1); svc; svc = svc_iterator(0)) {
-		_d("%-20.20s state:%-7.7s dirty:%d", svc->cmd, svc_status(svc), svc->dirty);
-		if (svc->state == SVC_RUNNING_STATE && !svc_is_changed(svc)) {
-			snprintf(name, MAX_ARG_LEN, "svc%s", svc->cmd);
-			cond_set_path(cond_path(name), COND_ON);
-		}
-	}
 	cond_update(NULL);
 }
 

@@ -51,6 +51,21 @@ static void pidfile_callback(void *UNUSED(arg), int fd, int UNUSED(events))
 	}
 }
 
+static void pidfile_reconf(void *_null)
+{
+	static char name[MAX_ARG_LEN];
+
+	svc_t *svc;
+	(void)(_null);
+
+	for (svc = svc_iterator(1); svc; svc = svc_iterator(0)) {
+		if (svc->state == SVC_RUNNING_STATE && !svc_is_changed(svc)) {
+			snprintf(name, MAX_ARG_LEN, "svc%s", svc->cmd);
+			cond_set_path(cond_path(name), COND_ON);
+		}
+	}
+}
+
 static void pidfile_init (void *arg)
 {
 	struct context *ctx = arg;
@@ -70,6 +85,7 @@ static struct context pidfile_ctx;
 
 static plugin_t plugin = {
 	.hook[HOOK_BASEFS_UP]  = { .arg = &pidfile_ctx, .cb = pidfile_init },
+	.hook[HOOK_SVC_RECONF] = { .cb = pidfile_reconf },
 	.io = {
 		.cb    = pidfile_callback,
 		.flags = PLUGIN_IO_READ,

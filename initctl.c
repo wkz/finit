@@ -126,23 +126,49 @@ static void show_cond_one(const char *_conds)
 
 	strlcpy(conds, _conds, sizeof(conds));
 
+	putchar('<');
+
 	for (cond = strtok(conds, ","); cond; cond = strtok(NULL, ",")) {
-		printf("  %-20.20s  %s\n", cond, condstr(cond_get(cond)));
+		if (cond != conds)
+			putchar(',');
+
+		switch (cond_get(cond)) {
+		case COND_ON:
+			printf("+%s", cond);
+			break;
+		case COND_FLUX:
+			printf("\e[1m~%s\e[0m", cond);
+			break;
+		case COND_OFF:
+			printf("\e[1m-%s\e[0m", cond);
+			break;
+		}
 	}
-	
+
+	putchar('>');
 }
 
 static void show_cond(void)
 {
+	enum cond_state cond;
 	svc_t *svc;
+
+	printf("PID     Service               Status  Condition (+ on, ~ flux, - off)\n");
+	printf("====================================================================================\n");
 
 	for (svc = svc_iterator(1); svc; svc = svc_iterator(0)) {
 		if (!svc->cond[0])
 			continue;
 
-		printf("%-22.22s  %s\n", svc->cmd,
-		       condstr(cond_get_agg(svc->cond)));
-		puts("======================  ====");
+		cond = cond_get_agg(svc->cond);
+
+		printf("%-6d  %-20.20s  ", svc->pid, svc->cmd);
+
+		if (cond == COND_ON)
+			printf("%-6.6s  ", condstr(cond));
+		else
+			printf("\e[1m%-6.6s\e[0m  ", condstr(cond));
+
 		show_cond_one(svc->cond);
 		putchar('\n');
 	}
